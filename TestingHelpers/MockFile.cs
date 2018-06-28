@@ -523,8 +523,27 @@ namespace System.IO.Abstractions.TestingHelpers
         public override void SetAttributes(string path, FileAttributes fileAttributes)
         {
             mockFileDataAccessor.PathVerifier.IsLegalAbsoluteOrRelative(path, "path");
+            
+            var fileData = mockFileDataAccessor.GetFile(path);
+            
+            if (fileData != null)
+            {
+                fileData.Attributes = fileAttributes;
+            }
+            else
+            {
+                var directoryInfo = mockFileDataAccessor.DirectoryInfo.FromDirectoryName(path);
+                if (directoryInfo.Exists)
+                {
+                    directoryInfo.Attributes = fileAttributes;
+                }
+                else
+                {
+                    VerifyDirectoryExists(path);
 
-            mockFileDataAccessor.GetFile(path).Attributes = fileAttributes;
+                    throw new FileNotFoundException(string.Format(CultureInfo.InvariantCulture, "Could not find file '{0}'.", path));
+                }
+            }
         }
 
         public override void SetCreationTime(string path, DateTime creationTime)

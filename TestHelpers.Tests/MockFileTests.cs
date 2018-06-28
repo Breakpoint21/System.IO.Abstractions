@@ -552,6 +552,110 @@ namespace System.IO.Abstractions.TestingHelpers.Tests
             Assert.That(filesystem.FileExists(filepath));
         }
 
+        [Test]
+        public void MockFile_SetAttributeOfNonExistantFileButParentDirectoryExists_ShouldThrowOneFileNotFoundException()
+        {
+            // Arrange
+            var fileSystem = new MockFileSystem();
+            fileSystem.AddDirectory(XFS.Path(@"c:\something"));
+
+            // Act
+            TestDelegate action = () => fileSystem.File.SetAttributes(XFS.Path(@"c:\something\demo.txt"), FileAttributes.Normal);
+
+            // Assert
+            Assert.Throws<FileNotFoundException>(action);
+        }
+
+        [Test]
+        public void MockFile_SetAttributeOfNonExistantFile_ShouldThrowOneDirectoryNotFoundException()
+        {
+            // Arrange
+            var fileSystem = new MockFileSystem();
+
+            // Act
+            TestDelegate action = () => fileSystem.File.SetAttributes(XFS.Path(@"c:\something\demo.txt"), FileAttributes.Normal);
+
+            // Assert
+            Assert.Throws<DirectoryNotFoundException>(action);
+        }
+
+        [Test]
+        public void MockFile_SetAttributeOfExistingFile_ShouldPersist()
+        {
+            var filedata = new MockFileData("test")
+            {
+                Attributes = FileAttributes.Hidden
+            };
+            var fileSystem = new MockFileSystem(new Dictionary<string, MockFileData>
+            {
+                { XFS.Path(@"c:\something\demo.txt"),  filedata }
+            });
+
+            fileSystem.File.SetAttributes(XFS.Path(@"c:\something\demo.txt"), FileAttributes.Normal);
+            Assert.That(filedata.Attributes, Is.EqualTo(FileAttributes.Normal));
+        }
+
+        [Test]
+        public void MockFile_SetAttributeOfExistingDirectory_ShouldPersist()
+        {
+            var directoryData = new MockDirectoryData()
+            {
+                Attributes = FileAttributes.ReadOnly
+            };
+            var fileSystem = new MockFileSystem(new Dictionary<string, MockFileData>
+            {
+                { XFS.Path(@"c:\something"),  directoryData }
+            });
+
+            fileSystem.File.SetAttributes(XFS.Path(@"c:\something"), FileAttributes.Normal);
+            Assert.That(directoryData.Attributes, Is.EqualTo(FileAttributes.Normal));
+        }
+
+        [Test]
+        public void MockFile_SetAttributeOfExistingUncDirectory_ShouldPersist()
+        {
+            var directoryData = new MockDirectoryData()
+            {
+                Attributes = FileAttributes.ReadOnly
+            };
+            var fileSystem = new MockFileSystem(new Dictionary<string, MockFileData>
+            {
+                { XFS.Path(@"\\server\share\folder"), directoryData }
+            });
+
+            fileSystem.File.SetAttributes(XFS.Path(@"\\server\share\folder"), FileAttributes.Hidden);
+            Assert.That(directoryData.Attributes, Is.EqualTo(FileAttributes.Hidden));
+        }
+
+        [Test]
+        public void MockFile_SetAttributeWithEmptyPath_ShouldThrowOneArgumentException()
+        {
+            // Arrange
+            var fileSystem = new MockFileSystem();
+
+            // Act
+            TestDelegate action = () => fileSystem.File.SetAttributes(string.Empty, FileAttributes.Normal);
+
+            // Assert
+            var exception = Assert.Throws<ArgumentException>(action);
+            Assert.That(exception.Message, Does.StartWith("Empty file name is not legal."));
+        }
+
+        [Test]
+        public void MockFile_SetAttributeWithIllegalParameter_ShouldThrowOneNotSupportedException()
+        {
+            // Arrange
+            var fileSystem = new MockFileSystem();
+
+            // Act
+            TestDelegate action = () => fileSystem.File.SetAttributes(@"c:\some|thing\test", FileAttributes.Normal);
+
+            // Assert
+            var exception = Assert.Throws<ArgumentException>(action);
+            Assert.That(exception.Message, Does.StartWith("Illegal characters in path."));
+        }
+
+
 #if NET40
         [Test]
         public void Serializable_works()
